@@ -30,7 +30,7 @@ window.COLAB={
 };
 // pasos: ing = elegir ingredientes; cortar = tocar N veces; orden = poner en orden; punto = parar la aguja en verde
 window.RECETAS={
- morcilla:{n:'Morcilla de arroz con pimientos del piquillo',video:'Con Mucho Gusto (Telecinco)',em:'🫑',
+ morcilla:{hoy:'k_hoy_morcilla',n:'Morcilla de arroz con pimientos del piquillo',video:'Con Mucho Gusto (Telecinco)',em:'🫑',
   ing:['Morcilla de arroz','Pimientos del piquillo','Aceite de oliva','Ajo'],no:['Chocolate','Plátano','Nata montada'],
   cortar:'la morcilla en rodajas',orden:['Cortar la morcilla en rodajas','Dorar la morcilla en la sartén','Confitar los pimientos con ajo','Emplatar y servir'],punto:'Vuelta y vuelta a la morcilla'},
  rape:{n:'Rape con salsa americana',video:'Con Mucho Gusto (Telecinco)',em:'🐟',
@@ -48,7 +48,7 @@ window.RECETAS={
  marmitako:{n:'Marmitako de bonito',video:null,em:'🍲',
   ing:['Bonito','Patata','Pimiento verde','Cebolla','Carne de pimiento choricero'],no:['Piña','Queso azul'],
   cortar:'el bonito en dados',orden:['Pochar cebolla y pimiento','Añadir la patata cascada','Cubrir con caldo','Añadir el bonito al final'],punto:'El bonito, solo un minuto'},
- alubias:{n:'Crema de alubias blancas con costrones de pan y crujiente de cecina',video:'Programa completo 2013 (Antena 3)',em:'🥣',
+ alubias:{hoy:'k_hoy_alubias',n:'Crema de alubias blancas con costrones de pan y crujiente de cecina',video:'Programa completo 2013 (Antena 3)',em:'🥣',
   ing:['Alubias blancas','Pan','Cecina','Puerro','Aceite de oliva'],no:['Nata de fresa','Coco'],
   cortar:'el pan en costrones',orden:['Cocer las alubias con la verdura','Triturar la crema','Freír los costrones de pan','Tostar la cecina y emplatar'],punto:'Freír los costrones'},
  berza:{n:'Berza (repollo) rehogada',video:'Hogarutil (Antena 3)',em:'🥬',
@@ -60,7 +60,7 @@ window.RECETAS={
  ensalada:{n:'Ensalada con vinagreta',video:null,em:'🥗',
   ing:['Lechuga','Tomate','Cebolleta','Aceite de oliva','Vinagre'],no:['Chocolate','Galletas'],
   cortar:'el tomate',orden:['Lavar la lechuga','Cortar el tomate y la cebolleta','Hacer la vinagreta','Aliñar justo antes de servir'],punto:'Batir la vinagreta'},
- pochas:{n:'Pochas con guindillas fritas y tomate asado',video:'Pochas con guindillas fritas y tomate asado (Cocina abierta)',em:'🫘',
+ pochas:{hoy:'k_hoy_pochas',n:'Pochas con guindillas fritas y tomate asado',video:'Pochas con guindillas fritas y tomate asado (Cocina abierta)',em:'🫘',
   ing:['Pochas','Guindillas','Tomate','Cebolla','Pimiento verde'],no:['Mermelada','Plátano'],
   cortar:'la cebolla',orden:['Cocer las pochas con la verdura','Asar el tomate','Freír las guindillas','Servir con el tomate asado y las guindillas'],punto:'Freír las guindillas'},
  ensaladaroble:{n:'Ensalada de hoja de roble',video:'Pochas… (Cocina abierta)',em:'🥗',

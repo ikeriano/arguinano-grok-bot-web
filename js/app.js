@@ -15,14 +15,17 @@ function musica(src,loop=true,vol=.55){paraMusica();if(!A.musica||!src)return;be
 function paraMusica(){if(bed){bed.pause();bed=null;}}
 let vozActual=null,saltar=false,hablando=false;const SUB=$('#sub');
 function clip(id,quien,txt){return new Promise(res=>{ // reproduce un clip (real o TTS) con subtítulo
-  txt=txt??((window.VOZ||{})[id]||'');if(txt){SUB.textContent=(quien?quien+': ':'')+txt;SUB.classList.remove('oculto');}
+  txt=txt??((window.VOZ||{})[id]||(window.ACLIPS||{})[id]||'');if(txt){SUB.textContent=(quien?quien+': ':'')+txt;SUB.classList.remove('oculto');}
   const fin=()=>{SUB.classList.add('oculto');vozActual=null;hablando=false;res();};
   if(!A.voz||saltar){setTimeout(fin,saltar?0:Math.min(7000,900+txt.length*55));return;}
   const a=new Audio('voz/'+id+'.ogg');a.volume=1;vozActual={a,fin};hablando=true;if(bed)bed.volume=.18*(A.volMus??1);
   const ok=()=>{if(bed)bed.volume=(+bed.dataset.v)*(A.volMus??1);fin();};vozActual.fin=ok;
   a.onended=ok;a.onerror=()=>setTimeout(ok,1200);a.play().catch(()=>setTimeout(ok,1500));});}
 const KTXT={k_bienvenida:'Muy buenas, queridas amigas, queridos amigos y queridas familias.',k_bienvenida13:'Muy buenas, queridas amigas, queridos amigos y queridas familias.',k_familias04:'Bueno, familias, amigos y amigas, vamos a preparar…',k_vamos:'Vamos allá.',k_vamos2:'¡Vamos allá!',k_vamos3:'Vamos allá.',k_vamos13:'¡Vamos allá!',k_muybien:'Bien, bien, perfecto, perfecto, muy bien, muy bien.',k_muybien2:'Muy bien.',k_quebueno:'Ay, qué bueno.',k_quebueno2:'Qué bueno.',k_comodito:'Muy bien, comodito.',k_muybieneva:'Sí, señor. Muy bien, Eva.',k_perejil:'Ahora una ramita de perejil.',k_despedida:'Queridas amigas, queridos amigos y queridas familias, ha sido un placer.',k_manana:'Mañana nos vemos aquí.',k_fundamento:'…para que todos vayamos entrándole a la cosa con fundamento.',k_chiste:'Tengo chiste.'};
+Object.assign(KTXT,window.KCLIPS||{});
 const karlos=id=>clip(id,'Karlos',KTXT[id]);
+const hay=id=>!!KTXT[id];
+const kr=(...ids)=>{const l=ids.flat().filter(hay);return l.length?karlos(rnd(l)):Promise.resolve();};
 function cortaVoz(){if(vozActual){vozActual.a.pause();vozActual.fin();}}
 // ---------- 3D ----------
 const canvas=$('#c3d');const lowEnd=(navigator.hardwareConcurrency||4)<=4||Math.min(screen.width,screen.height)<=720;
@@ -212,11 +215,23 @@ const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;let grua=null;
 const CEN=new THREE.Vector3(0.4,0,-2.6);
 function gruaPos(k,o){return [CEN.x+Math.sin(o.a)*o.r,o.h,CEN.z+Math.cos(o.a)*o.r];}
 function moverGrua(desde,hasta,ms,mira){return new Promise(res=>{orbita=false;grua={t0:performance.now(),ms,desde,hasta,mira:mira||[0.4,1.2,-4],res};});}
-const GRUAS={entrada:[{a:-1.1,r:6.5,h:3.6},{a:0.05,r:3.6,h:1.85}],paso:[{a:0.5,r:4.2,h:3.0},{a:-0.35,r:4.0,h:2.2}],paso2:[{a:-0.6,r:4.6,h:1.4},{a:0.4,r:4.0,h:3.1}],emplatado:[{a:0.9,r:5.0,h:3.8},{a:0.0,r:2.9,h:1.6}]};
-async function tomaGrua(n,ms=3200,mira){const [a,b]=GRUAS[n];await moverGrua(a,b,ms,mira||(n==='emplatado'?[0,0.95,0.1]:[0.4,1.3,-3.5]));}const s0=()=>performance.now()/1000;
+// 5 movimientos de grúa (referencia: ejemplos de Iker): [posDesde,miraDesde,posHasta,miraHasta,ms]
+const GRUAS={
+ acercar:[[0.2,3.6,5.2],[0.2,1.2,-3],[0.15,1.75,1.3],[0.1,1.6,-1],6000],          // 1) push-in de plano general elevado a plano medio de Karlos
+ cenital:[[0.6,1.8,2.2],[0,1.0,0.1],[-0.25,3.3,0.35],[-0.25,0.95,0.15],5500],      // 3) sube y picado hasta vista cenital del plato
+ abrir:[[0.15,1.75,1.4],[0.1,1.6,-1],[0.4,3.2,5.6],[0.5,1.3,-4.5],6500],            // 4) dolly-out que descubre todo el plató
+ bajo:[[0.8,2.4,2.4],[0.1,1.5,-1],[0.6,0.55,1.9],[0.1,1.9,-1],4000],                // 5) bajada rápida a contrapicado (momento divertido)
+};
+async function tomaGrua(n,ms){const g=GRUAS[n];if(n==='lateral')return;await moverGrua2(g[0],g[1],g[2],g[3],ms||g[4]);}
+function moverGrua2(p0,l0,p1,l1,ms){return new Promise(res=>{orbita=false;grua={t0:performance.now(),ms,p0,l0,p1,l1,res};});}
+// 2) travelling lateral siguiendo a Karlos que camina (al horno, la nevera o la tabla)
+async function travelling(destX,ms=4500){if(!host)return;const x0=host.position.x;const t0=performance.now();orbita=false;andando=true;
+  await new Promise(res=>{const f=()=>{const k=Math.min(1,(performance.now()-t0)/ms),e=ease(k);host.position.x=x0+(destX-x0)*e;host.rotation.y=destX>x0?0.9*(k<1?1:0):-0.9*(k<1?1:0);const hx=host.position.x;grua={t0:0,ms:1,p0:[hx,1.75,1.9],l0:[hx,1.5,-1],p1:[hx,1.75,1.9],l1:[hx,1.5,-1],res:()=>{}};if(k<1)requestAnimationFrame(f);else{host.rotation.y=0;andando=false;res();}};f();});}
+let andando=false;let mg={i:0,t0:0};const MGS=['abrir','acercar','bajo','cenital'];
+function menuGruas(){const t=performance.now();const n=MGS[mg.i%MGS.length];const g=GRUAS[n];const ms=g[4]+1500;if(!mg.t0)mg.t0=t;let f=(t-mg.t0)/g[4];if(t-mg.t0>ms){mg.i++;mg.t0=t;f=0;}f=Math.min(1,f);const e=ease(f);const L3=(u,v)=>u.map((x,i)=>x+(v[i]-x)*e);camT.p.set(...L3(g[0],g[2]));camT.p.y+=Math.sin(e*Math.PI)*0.35;camT.l.set(...L3(g[1],g[3]));return true;}
 function loop(t){requestAnimationFrame(loop);const fps=calidad()==='baja'?30:60;if(t-last<1000/fps-2)return;const dt=Math.min(0.1,(t-last)/1000);last=t;if(!render3D)return;
-  if(grua){const f=Math.min(1,(performance.now()-grua.t0)/grua.ms),e=ease(f),d=grua.desde,h=grua.hasta;const o={a:d.a+(h.a-d.a)*e,r:d.r+(h.r-d.r)*e,h:d.h+(h.h-d.h)*e+Math.sin(e*Math.PI)*0.6};camT.p.set(...gruaPos(e,o));camT.l.set(...grua.mira);camC.p.copy(camT.p);camC.l.lerp(camT.l,0.2);if(f>=1){const r=grua.res;grua=null;r();}}
-  else if(orbita){const t=s0();const a=Math.sin(t*0.09)*0.95,h=2.2+Math.sin(t*0.13+1)*1.1,r=4.6+Math.sin(t*0.07)*0.9;camT.p.set(...gruaPos(0,{a,h,r}));camT.l.set(0.4,1.1+Math.sin(t*0.11)*0.25,-4.2);}
+  if(grua){const f=grua.ms<=1?1:Math.min(1,(performance.now()-grua.t0)/grua.ms),e=ease(f);const L3=(u,v)=>u.map((x,i)=>x+(v[i]-x)*e);const arco=Math.sin(e*Math.PI)*0.35;const pp=L3(grua.p0,grua.p1);pp[1]+=arco;camT.p.set(...pp);camT.l.set(...L3(grua.l0,grua.l1));camC.p.copy(camT.p);camC.l.copy(camT.l);if(f>=1&&grua.ms>1){const r=grua.res;grua=null;r();}else if(grua.ms<=1){grua=null;}}
+  else if(orbita&&menuGruas()){}else if(orbita){const t=s0();const a=Math.sin(t*0.09)*0.95,h=2.2+Math.sin(t*0.13+1)*1.1,r=4.6+Math.sin(t*0.07)*0.9;camT.p.set(...gruaPos(0,{a,h,r}));camT.l.set(0.4,1.1+Math.sin(t*0.11)*0.25,-4.2);}
   const k=1-Math.pow(0.05,dt);camC.p.lerp(camT.p,k);camC.l.lerp(camT.l,k);cam.position.copy(camC.p);cam.lookAt(camC.l);
   const s=t/1000;if(host){host.userData.boca.scale.y=hablando?1+3*Math.abs(Math.sin(s*13)):1;host.rotation.z=Math.sin(s*1.2)*0.012;}if(invitado)invitado.rotation.z=Math.sin(s*1.1+1)*0.01;
   renderer.render(scene,cam);}
@@ -254,7 +269,7 @@ function Lt(a='main'){
       mbtn('Opciones','Tu nombre, música, voz, cabecera, plató, calidad gráfica','',()=>Lt('options')),
       mbtn('Ver cabecera','Las cabeceras reales de cada etapa y la del juego','',()=>Lt('cabs')),
       mbtn('La historia del programa','Karlos te la cuenta, con chistes (voz sintética)','hist',()=>{salirMenu();historia();}),
-      mbtn('Cómo se juega','Pasos de cocina y preguntas','',()=>Lt('help')),mbtn('Créditos','','',()=>Lt('credits')));}
+      mbtn('Vídeos de Ikeriano (Grok Imagine)','Los 33 vídeos de Iker, tal cual','gold',()=>Lt('videos')),mbtn('Cómo se juega','Pasos de cocina y preguntas','',()=>Lt('help')),mbtn('Créditos','','',()=>Lt('credits')));}
   else if(a==='play'){r.append(h2('Elige etapa'));ETAPAS.forEach(et=>r.append(mbtn(et.nombre,`${et.titulo} · ${et.años}`+(EST.mejor[et.id]?` · récord ${EST.mejor[et.id]}`:''),'gold',()=>{etSel=et;Lt('dia');})));r.append(volverB('main'));}
   else if(a==='dia'){r.append(h2(etSel.titulo));['Lunes','Martes','Miércoles','Jueves','Viernes'].forEach((d,k)=>{const cid=colabDia(etSel,d);const hostJ=etSel.id==='a3_2019'&&d==='Viernes';r.append(mbtn(d,`${REC[etSel.recetas[k%etSel.recetas.length]].n}`+(hostJ?' · presenta Joseba':'')+(cid?` · con ${COLAB[cid].nombre}`:''),k?'':'gold',()=>{salirMenu();programa(etSel,d,k);}));});r.append(volverB('play'));}
   else if(a==='options'){r.appendChild(h2('Opciones'));const nom=document.createElement('input');nom.className='otext';nom.value=A.nombre;nom.maxLength=14;nom.onclick=e=>e.stopPropagation();nom.oninput=()=>{A.nombre=nom.value.trim()||'Iker';guardaA();};
@@ -264,9 +279,17 @@ function Lt(a='main'){
       fila('✨ Calidad gráfica',...elige('calidad',[['auto','Auto'],['baja','Baja'],['alta','Alta']],()=>{ajustaTam();})));
     const x=document.createElement('p');x.className='mtext';x.textContent='«Auto» en el plató: lámparas en el programa del puré de alubias (2013) y nevera Vía Nature en el resto, como en los vídeos de hogarmania/hogarutil.';r.append(x,volverB('main'));}
   else if(a==='cabs'){r.append(h2('Ver cabecera'),mbtn('Cabecera del juego','La canción que mandó Iker','gold',async()=>{salirMenu();await cabeceraJuegoPantalla();menu();}));ETAPAS.forEach(et=>r.append(mbtn(et.nombre,et.cabNota,'',async()=>{salirMenu();await cabecera(et);menu();})));r.append(volverB('main'));}
+  else if(a==='videos'){r.classList.add('text');r.append(volverB('main'),h2('Vídeos de Ikeriano (Grok Imagine)'));const gd=document.createElement('div');gd.className='galeria';
+    for(let i=1;i<=NVID;i++){const t=document.createElement('button');t.className='mini';t.innerHTML=`<img src="ika/${String(i).padStart(2,'0')}.jpg" loading="lazy"><span>${i}</span>`;t.onclick=e=>{e.stopPropagation();verVideo(i);};gd.appendChild(t);}r.append(gd);}
   else if(a==='help'){r.classList.add('text');r.append(volverB('main'),h2('Cómo se juega'));const u=document.createElement('div');u.className='mtext';u.innerHTML=`<p>Elige una <b>etapa</b> del programa y un <b>día</b>. Karlos cocina un plato y tú cocinas con él:</p><p>🧺 <b>Ingredientes:</b> toca los que lleva el plato.<br>🔪 <b>Cortar:</b> toca muchas veces el botón antes de que acabe el tiempo.<br>📋 <b>En orden:</b> toca los pasos en el orden correcto.<br>⏱ <b>Punto:</b> para la aguja en la zona verde.<br>❓ <b>Preguntas</b> de cocina.</p><p>Los colaboradores salen en sus días. Cada acierto da puntos.</p>`;r.append(u);}
   else if(a==='credits'){r.classList.add('text');r.append(volverB('main'),h2('Créditos'));const u=document.createElement('div');u.className='mtext';u.innerHTML=`<p><b>Idea</b><br>Iker (Ikeriano)</p><p><b>Música, cabeceras y frases de Karlos</b><br>Recortadas tal cual de los vídeos de referencia y de los archivos de Iker.</p><p><b>Voz sintética (TTS Piper)</b><br>La historia del programa y las presentaciones de los colaboradores. No son sus voces reales.</p><p class="small">Versión ${VERSION}. Juego de fans sin ánimo de lucro inspirado en los programas de cocina de Karlos Arguiñano.</p>`;r.append(u);}
   const l=document.createElement('div');l.className='mver';l.textContent='v'+VERSION;n.appendChild(l);n.append(i,r);e.appendChild(n);}
+const NVID=0;
+function verVideo(i){paraMusica();const c=document.createElement('div');c.id='cab';const v=document.createElement('video');v.playsInline=true;v.setAttribute('playsinline','');v.controls=false;c.appendChild(v);
+  const bar=document.createElement('div');bar.className='vbar';const lab=document.createElement('span');const mk=(t,f)=>{const b=document.createElement('button');b.className='btnR';b.textContent=t;b.onclick=e=>{e.stopPropagation();f();};return b;};
+  const carga=n=>{i=(n-1+NVID)%NVID+1;v.src=`ika/${String(i).padStart(2,'0')}.mp4`;v.volume=A.volMus??1;v.play().catch(()=>{});lab.textContent=`Vídeo ${i} de ${NVID}`;};
+  bar.append(mk('⏮ Anterior',()=>carga(i-1)),mk('⏯',()=>v.paused?v.play():v.pause()),lab,mk('Siguiente ⏭',()=>carga(i+1)),mk('✖ Cerrar',()=>{v.pause();c.remove();entrarMenu();}));
+  v.onended=()=>carga(i+1);c.appendChild(bar);document.body.appendChild(c);carga(i);}
 function salirMenu(){orbita=false;$('#ver').style.display='';if(menuEl)menuEl.classList.add('oculto');paraMusica();}
 function colabDia(et,d){return et.colab.find(c=>COLAB[c].dia===d)||null;}
 // cabecera cantada del juego (archivo de Iker, tal cual) con el logo sincronizado
@@ -315,24 +338,24 @@ async function programa(et,dia,k){puntos=0;construyeSet(et,'lamparas');const rid
   const hostId=(et.id==='a3_2019'&&dia==='Viernes')?'joseba':'karlos';ponHost(hostId);ponInvitado(null);musica(et.musica,true,.3);
   hud(et,rec);const b=botonSaltar();b.textContent='Menú ✖';b.onclick=()=>{saltar=true;cortaVoz();sessionStorage.setItem('kar_menu','1');location.reload();};
   const rt=document.createElement('div');rt.className='rotulo';rt.textContent=`${dia} · ${rec.n}`;UI.appendChild(rt);
-  await tomaGrua('entrada',4200);if(hostId==='karlos'){vista('karlos');await karlos(et.saludo);await karlos(rnd(['k_vamos','k_vamos2','k_vamos3','k_vamos13']));}else{vista('karlos');await clip('c_joseba','Joseba (TTS)');}
-  rt.remove();vista('lateral');
-  let r=await pasoIng(rec);if(r.ok===rec.ing.length&&!r.mal)await bien(et);
-  cajaFuera();await tomaGrua('paso',2600);r=await pasoCortar(rec);if(r.ok)await bien(et);
-  cajaFuera();await tomaGrua('paso2',2600);r=await pasoOrden(rec);if(r.ok)await bien(et);
-  cajaFuera();await tomaGrua('paso',2400);r=await pasoPunto(rec);if(r.ok)await bien(et);
-  cajaFuera();await tomaGrua('emplatado',3400);if(hostId==='karlos')await karlos(rnd(['k_quebueno','k_perejil','k_muybien']));
+  await tomaGrua('abrir',5000);await tomaGrua('acercar',5500);if(hostId==='karlos'){vista('karlos');await karlos(et.saludo);if(rec.hoy&&hay(rec.hoy))await karlos(rec.hoy);await kr('k_vamos','k_vamos2','k_vamos3','k_vamos13');}else{vista('karlos');await clip('c_joseba','Joseba (TTS)');}
+  rt.remove();vista('lateral');const K=hostId==='karlos';
+  if(K)await kr('k_ingr_sencillos','k_ingr_mirad');let r=await pasoIng(rec);if(r.ok===rec.ing.length&&!r.mal)await bien(et);
+  cajaFuera();const tv=travelling(-1.2,4000);if(K)await kr('k_cortar_brunoise','k_cortar_rodajas','k_cortar_cebolleta','k_daditos');await tv;r=await pasoCortar(rec);if(r.ok)await bien(et);
+  cajaFuera();const tv2=travelling(0.1,4000);if(K)await kr('k_rehogar','k_dorar','k_fuego99','k_sal_pizquita','k_sal_olla','k_rehogar_rico');await tv2;if(K&&Math.random()<0.5){await tomaGrua('bajo');await kr('k_chiste_cigarro','k_chiste_ca');}r=await pasoOrden(rec);if(r.ok)await bien(et);
+  cajaFuera();await tomaGrua('acercar',4500);if(K){const pt=rec.punto.toLowerCase();await kr(/horno/.test(pt)?['k_horno_meto','k_horno_precalentado','k_horno_cecina']:/fre[ií]r|fritu/.test(pt)?['k_freir_guindillas','k_freir_costrones']:['k_fuego_suave','k_vapor','k_hierva15']);}r=await pasoPunto(rec);if(r.ok)await bien(et);
+  cajaFuera();const cz=tomaGrua('cenital');if(K){await kr('k_perejil','k_perejil_picadito','k_perejil04');await kr('k_rico_queRico','k_rico_muyRico','k_rehogar_rico','k_sabrosas','k_quebueno');}await cz;
   r=await pasoQuiz(nuevaQ());if(r.ok)await bien(et);
   const cid=colabDia(et,dia);
   if(cid&&!(cid==='joseba'&&hostId==='joseba')){const C=COLAB[cid],cr=REC[C.receta];ponInvitado(cid);vista('dos');hud(et,cr);const cl=document.createElement('div');cl.className='colab';cl.textContent=`${C.nombre} · ${C.papel} (voz sintética)`;UI.appendChild(cl);
-    await clip(C.voz,C.nombre.split(' ')[0]+' (TTS)');if(cid==='eva'&&et.bien.includes('k_muybieneva')){}
+    if(cid==='ainhoa'&&hay('k_hola_ainhoa')&&et.id==='a3_2010')await karlos('k_hola_ainhoa');if(cid==='ainhoa'&&window.ACLIPS){await clip(rnd(Object.keys(window.ACLIPS)),'Ainhoa',null);}else await clip(C.voz,C.nombre.split(' ')[0]+' (TTS)');if(cid==='eva'&&et.bien.includes('k_muybieneva')){}
     r=await pasoIng(cr);r=await pasoPunto(cr);if(r.ok&&cid==='eva'&&et.bien.includes('k_muybieneva'))await karlos('k_muybieneva');r=await pasoQuiz(nuevaQ());}
   r=await pasoQuiz(nuevaQ());
   // final
-  UI.innerHTML='';tomaGrua('emplatado',3000);EST.mejor[et.id]=Math.max(EST.mejor[et.id]||0,puntos);EST.total=(EST.total||0)+puntos;guardaE();
+  UI.innerHTML='';tomaGrua('abrir');EST.mejor[et.id]=Math.max(EST.mejor[et.id]||0,puntos);EST.total=(EST.total||0)+puntos;guardaE();
   UI.innerHTML=`<div class="caja"><h3>${rec.em} ¡Plato terminado!</h3><div class="plato">${puntos} puntos</div><div>Récord de la etapa: ${EST.mejor[et.id]}</div><button class="btnR" id="sg">Otro día</button> <button class="btnR" id="mn">Menú</button></div>`;
   $('#sg').onclick=()=>{cortaVoz();paraMusica();Lt('dia');};$('#mn').onclick=()=>{cortaVoz();paraMusica();menu();};
-  if(hostId==='karlos'){await karlos(et.despedida);await karlos('k_manana');}
+  if(hostId==='karlos'){if(et.id==='a3_2010'&&hay('k_hasta_manana_a3'))await karlos('k_hasta_manana_a3');else{await karlos('k_despedida');if(et.id==='a3_2019')await karlos('k_manana');}}
   if(et.id==='a3_2019'&&A.musica){musica('snd/despedida_cancion.ogg',false,.8);}}
 window.__k={sinOrbita:()=>{orbita=false;},programa,historia,cabecera,menu,Lt,vista,construyeSet,aplicaPlato,ponHost,ponInvitado,ETAPAS,pasoIng,pasoCortar,pasoOrden,pasoPunto,pasoQuiz,hud,A,luces};
 document.fonts.load('40px Logo').catch(()=>{}).finally(()=>{ajustaTam();construyeSet(ETAPAS[2],'lamparas');aplicaPlato('alubias');ponHost('karlos');vista('general',true);requestAnimationFrame(loop);menu();});

@@ -112,3 +112,6 @@ html,body{margin:0;height:100%;overflow:hidden;background:#140303;font-family:Ba
 .btnR{font:900 clamp(14px,2.6vw,22px) Arial,sans-serif;color:#fff;background:linear-gradient(#e3262f,#7a0c12);border:3px solid #fff3d0;border-radius:30px;padding:1vh 4vw;cursor:pointer;margin-top:1vh}
 .colab{position:absolute;right:2vw;top:2vh;background:#fffaf0ee;color:#3a1a0a;border:3px solid #2f9e44;border-radius:16px;padding:8px 14px;font:800 clamp(12px,2vw,17px) Arial,sans-serif;max-width:44vw}
 .rotulo{position:absolute;left:3vw;top:12vh;background:linear-gradient(#e3262f,#7a0c12);color:#fff;border:3px solid #fff3d0;border-radius:12px;padding:6px 16px;font:900 clamp(14px,2.8vw,24px) Arial,sans-serif;box-shadow:0 4px 12px #000a}
+.galeria{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.mini{position:relative;padding:0;border:2px solid #ffb43a;border-radius:10px;overflow:hidden;background:#000;cursor:pointer;aspect-ratio:16/9}.mini img{width:100%;height:100%;object-fit:cover;display:block}.mini span{position:absolute;left:4px;bottom:2px;font:900 13px Arial;color:#fff;text-shadow:0 1px 3px #000}
+.vbar{position:absolute;left:0;right:0;bottom:2vh;display:flex;gap:2vw;justify-content:center;align-items:center;font:800 clamp(12px,2vw,16px) Arial;color:#fff;text-shadow:0 1px 3px #000}.vbar .btnR{margin:0;padding:.6vh 2.4vw}
